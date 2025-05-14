@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
 
 class MainScreen extends StatefulWidget {
@@ -31,55 +30,33 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> loadCurrentAudio() async {
     try {
-      await player.setAsset(audioFiles[currentIndex]);
+      final currentFile = audioFiles[currentIndex];
+
+      // Set audio
+      await player.setAsset(currentFile);
       await player.play();
-      await detectLanguageFromFile(audioFiles[currentIndex]);
-    } catch (e) {
-      print("Audio load/play error: $e");
-    }
-    setState(() {});
-  }
 
-  Future<void> detectLanguageFromFile(String assetPath) async {
-    try {
-      // Simulated API detection logic (mock response)
-      String mockAccent = 'us'; // Default mock
-      if (assetPath.contains('arabic')) mockAccent = 'arabic';
-      if (assetPath.contains('english')) mockAccent = 'english';
-      if (assetPath.contains('japanese')) mockAccent = 'japanese';
-
-      await Future.delayed(Duration(seconds: 1)); // simulate delay
+      // Detect language (simulated) and set flag
+      final flagCode = _detectFlagFromFilename(currentFile);
 
       setState(() {
-        currentLanguageCode = _mapAccentToFlag(mockAccent);
+        currentLanguageCode = flagCode;
       });
 
-      print("Simulated accent: $mockAccent for $assetPath");
+      print("File: $currentFile → Flag: $flagCode");
     } catch (e) {
-      print("Language detection error: $e");
+      print("Error loading audio: $e");
       setState(() {
         currentLanguageCode = 'un';
       });
     }
   }
 
-  String _mapAccentToFlag(String accent) {
-    switch (accent.toLowerCase()) {
-      case 'us':
-        return 'us';
-      case 'indian':
-        return 'in';
-      case 'british':
-        return 'gb';
-      case 'australian':
-        return 'au';
-      case 'canadian':
-        return 'ca';
-      case 'arabic':
-        return 'sa';
-      default:
-        return 'un';
-    }
+  String _detectFlagFromFilename(String path) {
+    if (path.contains('arabic')) return 'sa'; // Saudi Arabia
+    if (path.contains('english')) return 'us'; // United States
+    if (path.contains('japanese')) return 'jp'; // Japan
+    return 'un'; // Unknown
   }
 
   void goToNext() {
@@ -123,7 +100,8 @@ class _MainScreenState extends State<MainScreen> {
               Image.network(
                 'https://flagcdn.com/48x36/${currentLanguageCode.toLowerCase()}.png',
                 height: 36,
-                errorBuilder: (context, error, stackTrace) => Text('Flag not found'),
+                errorBuilder: (context, error, stackTrace) =>
+                    Text('Flag not found'),
               ),
               SizedBox(height: 24),
               if (currentIndex < audioFiles.length - 1)
