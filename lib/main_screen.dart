@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
@@ -24,52 +23,63 @@ class _MainScreenState extends State<MainScreen> {
     'assets/data/japanese17.mp3',
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    loadCurrentAudio();
+  }
+
   Future<void> loadCurrentAudio() async {
-    await player.setAsset(audioFiles[currentIndex]);
-    detectLanguageFromFile(audioFiles[currentIndex]);
+    try {
+      await player.setAsset(audioFiles[currentIndex]);
+      await player.play();
+      await detectLanguageFromFile(audioFiles[currentIndex]);
+    } catch (e) {
+      print("Audio load/play error: $e");
+    }
     setState(() {});
   }
 
   Future<void> detectLanguageFromFile(String assetPath) async {
     try {
-      final byteData = await rootBundle.load(assetPath);
-      final tempDir = Directory.systemTemp;
-      final tempFile = File('${tempDir.path}/temp_audio.mp3');
-      await tempFile.writeAsBytes(byteData.buffer.asUint8List());
+      // Simulated API detection logic (mock response)
+      String mockAccent = 'us'; // Default mock
+      if (assetPath.contains('arabic')) mockAccent = 'arabic';
+      if (assetPath.contains('english')) mockAccent = 'english';
+      if (assetPath.contains('japanese')) mockAccent = 'japanese';
 
-      final uri = Uri.parse('http://192.168.100.9:5000/predict'); // Replace with your backend IP
-      final request = http.MultipartRequest('POST', uri)
-        ..files.add(await http.MultipartFile.fromPath('file', tempFile.path));
+      await Future.delayed(Duration(seconds: 1)); // simulate delay
 
-      final response = await request.send();
-      final respStr = await response.stream.bytesToString();
-      final jsonResp = jsonDecode(respStr);
+      setState(() {
+        currentLanguageCode = _mapAccentToFlag(mockAccent);
+      });
 
-      if (jsonResp.containsKey('accent')) {
-        setState(() {
-          currentLanguageCode = _mapAccentToFlag(jsonResp['accent']);
-        });
-      }
+      print("Simulated accent: $mockAccent for $assetPath");
     } catch (e) {
-      print("Error: $e");
+      print("Language detection error: $e");
+      setState(() {
+        currentLanguageCode = 'un';
+      });
     }
   }
 
   String _mapAccentToFlag(String accent) {
     switch (accent.toLowerCase()) {
-      case 'us': return 'us';
-      case 'indian': return 'in';
-      case 'british': return 'gb';
-      case 'australian': return 'au';
-      case 'canadian': return 'ca';
-      default: return 'un';
+      case 'us':
+        return 'us';
+      case 'indian':
+        return 'in';
+      case 'british':
+        return 'gb';
+      case 'australian':
+        return 'au';
+      case 'canadian':
+        return 'ca';
+      case 'arabic':
+        return 'sa';
+      default:
+        return 'un';
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    loadCurrentAudio();
   }
 
   void goToNext() {
@@ -113,6 +123,7 @@ class _MainScreenState extends State<MainScreen> {
               Image.network(
                 'https://flagcdn.com/48x36/${currentLanguageCode.toLowerCase()}.png',
                 height: 36,
+                errorBuilder: (context, error, stackTrace) => Text('Flag not found'),
               ),
               SizedBox(height: 24),
               if (currentIndex < audioFiles.length - 1)
